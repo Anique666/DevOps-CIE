@@ -1,0 +1,14 @@
+.git
+.gitignore
+data/
+kubernetes/
+docs/
+scripts/
+README.md
+*.md
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.venv/
+venv/
+.env

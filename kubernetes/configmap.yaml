@@ -1,0 +1,24 @@
+# Input data for the Kubernetes deployment.
+# Generated from data/sample.txt; kept declarative so the lab is reproducible.
+# A ConfigMap volume is read-only and is managed by the kubelet, so it does not
+# use host Docker bind-mount SELinux labels. Pod-level securityContext is the
+# enforcement layer inside Kubernetes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cie-input
+  namespace: cie
+  labels:
+    app.kubernetes.io/name: cie-worker
+data:
+  sample.txt: |
+    Secure containers reduce the impact of a compromised application. This worker
+    reads documents from one dedicated input directory and returns a simple word
+    count. It runs as an unprivileged user, drops every Linux capability, uses a
+    read-only root filesystem, and mounts its input directory read-only. On Fedora,
+    SELinux labels decide whether the container process may open a host file at
+    all. Docker volume labels such as :Z give the container a private category and
+    the correct container_file_t type. A missing label produces a real denial that
+    can be diagnosed with the audit log. Defence in depth means that ordinary file
+    permissions, container configuration, and mandatory access control each block a
+    different class of mistake.

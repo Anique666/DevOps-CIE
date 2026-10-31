@@ -1,0 +1,18 @@
+# ClusterIP keeps the worker reachable only from inside the cluster.
+# Use `kubectl port-forward` for local testing; no NodePort/LoadBalancer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cie-worker
+  namespace: cie
+  labels:
+    app.kubernetes.io/name: cie-worker
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cie-worker
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

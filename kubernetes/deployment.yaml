@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cie-worker
+  namespace: cie
+  labels:
+    app.kubernetes.io/name: cie-worker
+    app.kubernetes.io/part-of: cie-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cie-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cie-worker
+        app.kubernetes.io/part-of: cie-worker
+    spec:
+      # Do not mount a service account token: the worker never talks to the
+      # Kubernetes API.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: cie-worker:1.0
+          # The image is loaded with `minikube image load`; never pull from a
+          # registry. Change to IfNotPresent if you push to a local registry.
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          env:
+            - name: INPUT_DIR
+              value: /data
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: input-data
+              mountPath: /data
+              readOnly: true
+            # gunicorn/Python may need a writable temp directory even though
+            # the root filesystem is read-only.
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+      volumes:
+        # Read-only input data. ConfigMap volumes are kubelet-managed, not host
+        # Docker bind mounts, so host :Z labels do not apply here.
+        - name: input-data
+          configMap:
+            name: cie-input
+            defaultMode: 0444
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
